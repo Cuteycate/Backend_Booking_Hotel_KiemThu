@@ -1,0 +1,29 @@
+# Spring Boot Configuration
+spring:
+  # Database Configuration
+  datasource:
+    username: root
+    password:
+    url: jdbc:mysql://localhost:3306/booking_hotel_1
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  # JPA/Hibernate Configuration
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+      format_sql: true
+  
+  # File Upload Configuration
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+      file-size-threshold: 2KB
+  
+  # Security Configuration
+  security:
+    jwt:
+      # DO NOT COMMIT ACTUAL SECRET - Use environment variable
+      secret-key: ${JWT_SECRET}
+      expire-length: 3600000
