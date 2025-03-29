@@ -38,16 +38,17 @@ public class BookingController {
                                         @ModelAttribute BookingDTO bookingDTO) {
         try {
             // Lấy email từ userDetails
-            String email = userDetails.getUsername();
+            String email = userDetails.getUsername();//1
 
             // Tìm user bằng email
-            User user = userService.getUserByEmail(email);
-            if (user == null) {
+            User user = userService.getUserByEmail(email);//2
+            if (user == null) {//3
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
             }
 
             // Tạo đối tượng Booking từ BookingDTO
-            Booking booking = new Booking();
+            Booking booking = new Booking();//4
+
             booking.setCheckInDate(bookingDTO.getCheckInDate());
             booking.setCheckOutDate(bookingDTO.getCheckOutDate());
             booking.setNumberOfGuests(bookingDTO.getNumberOfGuests());
@@ -56,69 +57,74 @@ public class BookingController {
 
 
             // Lấy đối tượng Hotel từ hotelId trong DTO
-            Hotel hotel = hotelService.getHotelById1(bookingDTO.getHotelId());
-            if (hotel == null) {
+            Hotel hotel = hotelService.getHotelById1(bookingDTO.getHotelId());//5
+            if (hotel == null) {//6
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Hotel not found.");
             }
             booking.setHotel(hotel);
 
-            List<Long> roomIds = bookingDTO.getRoomIds();
+            List<Long> roomIds = bookingDTO.getRoomIds();//7
 
             // Đếm số lần xuất hiện của từng roomId trong roomIds
             Map<Long, Long> roomCountMap = roomIds.stream()
-                    .collect(Collectors.groupingBy(roomId -> roomId, Collectors.counting()));
+                    .collect(Collectors.groupingBy(roomId -> roomId, Collectors.counting()));//8
 
             // Lấy danh sách phòng từ cơ sở dữ liệu
-            List<Room> rooms = roomService.getAllRoomByIds(new ArrayList<>(roomCountMap.keySet()));
+            List<Room> rooms = roomService.getAllRoomByIds(new ArrayList<>(roomCountMap.keySet()));//9
 
             // Kiểm tra số lượng phòng có sẵn cho từng loại phòng (theo roomIds)
-            List<Room> bookingRooms = new ArrayList<>();
-            for (Map.Entry<Long, Long> entry : roomCountMap.entrySet()) {
-                Long roomId = entry.getKey();
-                Long roomCountRequested = entry.getValue();
+            List<Room> bookingRooms = new ArrayList<>();//9
+            for (Map.Entry<Long, Long> entry : roomCountMap.entrySet()) { //10
+                Long roomId = entry.getKey();//11
+                Long roomCountRequested = entry.getValue();//11
 
                 // Tìm phòng theo roomId
                 Room room = rooms.stream()
                         .filter(r -> r.getId().equals(roomId))
                         .findFirst()
-                        .orElse(null);
+                        .orElse(null);//11
 
                 if (room == null) {
+                    //12
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Room with ID " + roomId + " not found.");
                 }
 
                 // Kiểm tra số lượng phòng đã được đặt trong khoảng thời gian check-in và check-out
-                List<Booking> overlappingBookings = bookingService.findOverlappingBookings(roomId, bookingDTO.getCheckInDate(), bookingDTO.getCheckOutDate());
+                List<Booking> overlappingBookings = bookingService.findOverlappingBookings(roomId
+                        , bookingDTO.getCheckInDate(), bookingDTO.getCheckOutDate());//13
+
                 long roomBookedCount = overlappingBookings.stream()
                         .flatMap(b -> b.getRooms().stream())
                         .filter(r -> r.getId().equals(roomId))
-                        .count();
+                        .count();//14
 
                 // Kiểm tra số lượng phòng còn trống
-                if (room.getQuantity() - roomBookedCount < roomCountRequested) {
+                if (room.getQuantity() - roomBookedCount < roomCountRequested) {//15
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body("Not enough rooms available for room ID " + roomId + ". Only " + (room.getQuantity() - roomBookedCount) + " rooms available.");
                 }
 
                 // Thêm phòng vào danh sách bookingRooms
-                for (int i = 0; i < roomCountRequested; i++) {
-                    bookingRooms.add(room);
+                for (int i = 0; i < roomCountRequested; i++) {//16
+                    bookingRooms.add(room);//17
                 }
             }
-            booking.setRooms(bookingRooms);
+            booking.setRooms(bookingRooms);//18
 
             // Tính số ngày thuê và đảm bảo check-out phải sau check-in
-            long days = ChronoUnit.DAYS.between(bookingDTO.getCheckInDate(), bookingDTO.getCheckOutDate());
-            if (days <= 0) {
+            long days = ChronoUnit.DAYS.between(bookingDTO.getCheckInDate(),
+                    bookingDTO.getCheckOutDate());//18
+
+            if (days <= 0) {//19
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Check-out date must be after check-in date.");
             }
 
             // Lưu Booking cùng với hóa đơn (Invoice)
-            bookingService.saveBookingWithInvoice(booking);
+            bookingService.saveBookingWithInvoice(booking);//20
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body("Booking created successfully with invoice.");
+                    .body("Booking created successfully with invoice.");//21
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
@@ -161,12 +167,14 @@ public class BookingController {
                 user != null ? user.getEmail() : null,
                 user != null ? user.getFirstName() : null,
                 booking.getHotel().getName(),
+
                 booking.getRooms().stream().map(room -> room.getName()).collect(Collectors.toList()),
-                invoice != null ? invoice.getTotalPrice() : BigDecimal.ZERO,
+                 invoice != null ? invoice.getTotalPrice() : BigDecimal.ZERO,
                 invoice != null ? invoice.getDepositAmount() : BigDecimal.ZERO,
                 invoice != null ? invoice.getPaymentDate() : null,
                 invoice != null ? invoice.getPaymentMethod() : null,
                 false
+
         );
 
         return ResponseEntity.ok(bookingResponse);
