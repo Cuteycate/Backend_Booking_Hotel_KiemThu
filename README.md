@@ -171,14 +171,6 @@ Below are some screenshots showcasing key features:
 ![image](https://github.com/user-attachments/assets/cc754f6a-b045-4bd9-83ac-b169f08c1aeb)
 ![image](https://github.com/user-attachments/assets/5d90c970-2924-4319-bf9f-b88e97dd9081)
 
-
-
-
-## Credits
-- **[Hoàng Châu Phúc Thuận]** - Fullstack Developer
-- **[Duy]** - Helper
-- **[Nam]** - Helper
-
 ## Features
 - **JWT Authentication** for secure API requests.
 - **User Registration/Login** with email confirmation.
@@ -191,6 +183,3 @@ Below are some screenshots showcasing key features:
 - **Email Notifications** for booking confirmation and check-in codes.
 - **Responsive Design** for mobile and desktop users.
 
----
-
-_Add screenshots and more details as needed._
