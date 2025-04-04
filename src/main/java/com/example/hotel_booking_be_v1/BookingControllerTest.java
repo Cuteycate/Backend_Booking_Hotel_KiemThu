@@ -200,4 +200,68 @@ class BookingControllerTest {
         // Verify service calls
         verify(bookingService).saveBookingWithInvoice(any(Booking.class));
     }
+    @Test
+    void testSkipFirstLoop_WhenRoomCountMapEmpty() throws Exception {
+        // Setup test data
+        User user = new User();
+        Hotel hotel = new Hotel();
+        Room room = new Room();
+        room.setId(10L);
+        room.setQuantity(2);
+
+        // Setup mocks
+        when(userService.getUserByEmail("test123@gmail.com")).thenReturn(user);
+        when(hotelService.getHotelById1(6L)).thenReturn(hotel);
+        when(roomService.getAllRoomByIds(anyList())).thenReturn(List.of(room));
+        when(bookingService.findOverlappingBookings(anyLong(), any(), any())).thenReturn(Collections.emptyList());
+        doNothing().when(bookingService).saveBookingWithInvoice(any(Booking.class));
+
+        // Test không gửi roomIds
+        mockMvc.perform(post("/bookings/add")
+                        .header("Authorization", "Bearer " + token)
+                        .param("hotelId", "6")
+                        .param("checkInDate", "2025-04-10")
+                        .param("checkOutDate", "2025-04-15")
+                        .param("numberOfGuests", "2"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(containsString("Cannot invoke \"java.util.List.stream()\" because \"roomIds\" is null")));
+
+        // Verify rằng roomService không được gọi
+        verify(roomService, never()).getAllRoomByIds(anyList());
+        verify(bookingService, never()).findOverlappingBookings(anyLong(), any(), any());
+        verify(bookingService, never()).saveBookingWithInvoice(any(Booking.class));
+    }
+
+    @Test
+    void testSkipSecondLoop_WhenRoomCountRequestedZero() throws Exception {
+        // Setup test data
+        User user = new User();
+        Hotel hotel = new Hotel();
+        Room room = new Room();
+        room.setId(10L);
+        room.setQuantity(0); // Set quantity to 0 to make roomCountRequested = 0
+        room.setHotel(hotel);
+
+        // Setup mocks
+        when(userService.getUserByEmail("test123@gmail.com")).thenReturn(user);
+        when(hotelService.getHotelById1(6L)).thenReturn(hotel);
+        when(roomService.getAllRoomByIds(anyList())).thenReturn(List.of(room));
+        when(bookingService.findOverlappingBookings(anyLong(), any(), any()))
+                .thenReturn(Collections.emptyList());
+
+        // Test with room quantity = 0 to skip second loop
+        mockMvc.perform(post("/bookings/add")
+                        .header("Authorization", "Bearer " + token)
+                        .param("hotelId", "6")
+                        .param("roomIds", "10")
+                        .param("checkInDate", "2025-04-10")
+                        .param("checkOutDate", "2025-04-15")
+                        .param("numberOfGuests", "2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Not enough rooms available for room ID 10")));
+
+        // Verify first loop executed but second loop was skipped
+        verify(roomService).getAllRoomByIds(anyList());
+        verify(bookingService).findOverlappingBookings(anyLong(), any(), any());
+    }
 }
